@@ -31,22 +31,35 @@ function checkpoint.save(epoch, model, optimState, bestModel, opt)
       model = model:get(1)
    end
 
-   local modelFile = opt.savePath .. '/' .. 'model_' .. epoch .. '.t7'
-   local optimFile = opt.savePath .. '/' .. 'optimState_' .. epoch .. '.t7'
+   local modelFile = opt.savePath .. '/model_' .. epoch .. '.t7'
+   local optimFile = opt.savePath .. '/optimState_' .. epoch .. '.t7'
+   local latestFile = opt.savePath .. '/latest.t7'
+   local modelFile_cur = opt.savePath .. '/model_cur.t7'
+   local optimFile_cur = opt.savePath .. '/optimState_cur.t7'
+   local latestFile_cur = opt.savePath .. '/latest_cur.t7'
+   local bestFile = opt.savePath .. '/model_best.t7'
 
    if epoch==1 or epoch%opt.saveStep==0 then
       torch.save(modelFile, model)
       torch.save(optimFile, optimState)
+      torch.save(latestFile, {
+         epoch = epoch,
+         modelFile = modelFile,
+         optimFile = optimFile,
+      })
    end
 
-   torch.save('latest.t7', {
+   -- Always save current epoch (overwrite)
+   torch.save(modelFile_cur, model)
+   torch.save(optimFile_cur, optimState)
+   torch.save(latestFile_cur, {
       epoch = epoch,
       modelFile = modelFile,
       optimFile = optimFile,
    })
 
    if bestModel then
-      torch.save('model_best.t7', model)
+      torch.save(bestFile, model)
    end
 end
 

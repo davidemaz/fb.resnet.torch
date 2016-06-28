@@ -15,6 +15,7 @@ local models = require 'models/init'
 local Trainer = require 'train'
 local opts = require 'opts'
 local checkpoints = require 'checkpoints'
+local lfs = require "lfs"
 
 torch.setdefaulttensortype('torch.FloatTensor')
 torch.setnumthreads(1)
@@ -34,6 +35,9 @@ local trainLoader, valLoader = DataLoader.create(opt)
 
 -- The trainer handles the training loop and evaluation on validation set
 local trainer = Trainer(model, criterion, opt, optimState)
+
+-- Create saving directory
+lfs.mkdir(opt.savePath)
 
 if opt.testOnly then
    local top1Err, top5Err = trainer:test(0, valLoader)
@@ -59,7 +63,7 @@ for epoch = startEpoch, opt.nEpochs do
       print(' * Best model ', testTop1, testTop5)
    end
 
-   checkpoints.save(epoch, model, trainer.optimState, bestModel)
+   checkpoints.save(epoch, model, trainer.optimState, bestModel, opt)
 end
 
 print(string.format(' * Finished top1: %6.3f  top5: %6.3f', bestTop1, bestTop5))
