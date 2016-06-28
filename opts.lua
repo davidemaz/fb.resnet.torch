@@ -32,6 +32,8 @@ function M.parse(arg)
    cmd:option('-testOnly',        'false', 'Run on validation set only')
    cmd:option('-tenCrop',         'false', 'Ten-crop testing')
    cmd:option('-resume',          'none',  'Path to directory containing checkpoint')
+   cmd:option('-savePath',        '.',     'Path to save intermediate models')
+   cmd:option('-saveStep',        1,       'Save intermediate model every X epochs')
    ---------- Optimization options ----------------------
    cmd:option('-LR',              0.1,   'initial learning rate')
    cmd:option('-momentum',        0.9,   'momentum')
