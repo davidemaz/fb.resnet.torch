@@ -25,7 +25,6 @@ require 'cunn'
 require 'image'
 require 'xlua'
 local t = require '../datasets/transforms'
-local debugger = require('fb.debugger')
 
 
 if #arg < 2 then
@@ -52,7 +51,6 @@ if tonumber(arg[2]) ~= nil then -- batch mode ; collect file from directory
     dir_path   = arg[3]
     output_filename = arg[4]
 
---    debugger.enter()
     for file in lfs.dir(dir_path) do -- get the list of the files
         if file~="." and file~=".." then
             table.insert(list_of_filenames, dir_path..'/'..file)
