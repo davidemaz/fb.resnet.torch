@@ -116,10 +116,10 @@ function Trainer:test(epoch, dataloader)
    end
    self.model:training()
 
-   print((' * Finished epoch # %d     top1: %7.3f  top5: %7.3f\n'):format(
-      epoch, top1Sum / N, top5Sum / N))
+   print((' * Finished epoch # %d     loss: %7.3f  top1: %7.3f  top5: %7.3f\n'):format(
+      epoch, lossSum / N, top1Sum / N, top5Sum / N))
 
-   return top1Sum / N, top5Sum / N
+   return top1Sum / N, top5Sum / N, lossSum / N
 end
 
 function Trainer:computeScore(output, target, nCrops)

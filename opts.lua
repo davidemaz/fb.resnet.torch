@@ -34,6 +34,7 @@ function M.parse(arg)
    cmd:option('-resume',          'none',  'Path to directory containing checkpoint')
    cmd:option('-savePath',        '.',     'Path to save intermediate models')
    cmd:option('-saveStep',        1,       'Save intermediate model every X epochs')
+   cmd:option('-bestMetric',      'error', 'Select best model based on \'error\' or \'loss\'')
    ---------- Optimization options ----------------------
    cmd:option('-LR',              0.1,   'initial learning rate')
    cmd:option('-momentum',        0.9,   'momentum')
