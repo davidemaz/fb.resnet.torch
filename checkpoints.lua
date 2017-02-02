@@ -6,8 +6,23 @@
 --  LICENSE file in the root directory of this source tree. An additional grant
 --  of patent rights can be found in the PATENTS file in the same directory.
 --
-
 local checkpoint = {}
+
+local function deepCopy(tbl)
+   -- creates a copy of a network with new modules and the same tensors
+   local copy = {}
+   for k, v in pairs(tbl) do
+      if type(v) == 'table' then
+         copy[k] = deepCopy(v)
+      else
+         copy[k] = v
+      end
+   end
+   if torch.typename(tbl) then
+      torch.setmetatable(copy, torch.typename(tbl))
+   end
+   return copy
+end
 
 function checkpoint.latest(opt)
    if opt.resume == 'none' then
@@ -22,38 +37,32 @@ function checkpoint.latest(opt)
    print('=> Loading checkpoint ' .. latestPath)
    local latest = torch.load(latestPath)
    local optimState = torch.load(paths.concat(opt.resume, latest.optimFile))
+
    return latest, optimState
 end
 
-function checkpoint.save(epoch, model, optimState, bestModel, opt)
-   -- Don't save the DataParallelTable for easier loading on other machines
+function checkpoint.save(epoch, model, optimState, isBestModel, opt)
+   -- don't save the DataParallelTable for easier loading on other machines
    if torch.type(model) == 'nn.DataParallelTable' then
       model = model:get(1)
    end
 
-   local modelFile = opt.savePath .. '/model_' .. epoch .. '.t7'
-   local optimFile = opt.savePath .. '/optimState_' .. epoch .. '.t7'
-   local modelFile_cur = opt.savePath .. '/model_cur.t7'
-   local optimFile_cur = opt.savePath .. '/optimState_cur.t7'
-   local latestFile = opt.savePath .. '/latest.t7'
-   local bestFile = opt.savePath .. '/model_best.t7'
+   -- create a clean copy on the CPU without modifying the original network
+   model = deepCopy(model):float():clearState()
 
-   if epoch==1 or epoch%opt.saveStep==0 then
-      torch.save(modelFile, model)
-      torch.save(optimFile, optimState)
-   end
+   local modelFile = 'model_' .. epoch .. '.t7'
+   local optimFile = 'optimState_' .. epoch .. '.t7'
 
-   -- Always save current epoch (overwrite)
-   torch.save(modelFile_cur, model)
-   torch.save(optimFile_cur, optimState)
-   torch.save(latestFile, {
+   torch.save(paths.concat(opt.save, modelFile), model)
+   torch.save(paths.concat(opt.save, optimFile), optimState)
+   torch.save(paths.concat(opt.save, 'latest.t7'), {
       epoch = epoch,
-      modelFile = modelFile_cur,
-      optimFile = optimFile_cur,
+      modelFile = modelFile,
+      optimFile = optimFile,
    })
 
-   if bestModel then
-      torch.save(bestFile, model)
+   if isBestModel then
+      torch.save(paths.concat(opt.save, 'model_best.t7'), model)
    end
 end
 

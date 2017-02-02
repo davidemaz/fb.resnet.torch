@@ -17,6 +17,9 @@ local opts = require 'opts'
 local checkpoints = require 'checkpoints'
 local lfs = require "lfs"
 
+-- we don't  change this to the 'correct' type (e.g. HalfTensor), because math
+-- isn't supported on that type.  Type conversion later will handle having
+-- the correct type.
 torch.setdefaulttensortype('torch.FloatTensor')
 torch.setnumthreads(1)
 

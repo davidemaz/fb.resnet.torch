@@ -54,6 +54,7 @@ function Trainer:train(epoch, dataloader)
       self:copyInputs(sample)
 
       local output = self.model:forward(self.input):float()
+      local batchSize = output:size(1)
       local loss = self.criterion:forward(self.model.output, self.target)
 
       self.model:zeroGradParameters()
@@ -63,15 +64,15 @@ function Trainer:train(epoch, dataloader)
       optim.sgd(feval, self.params, self.optimState)
 
       local top1, top5 = self:computeScore(output, sample.target, 1)
-      top1Sum = top1Sum + top1
-      top5Sum = top5Sum + top5
-      lossSum = lossSum + loss
-      N = N + 1
+      top1Sum = top1Sum + top1*batchSize
+      top5Sum = top5Sum + top5*batchSize
+      lossSum = lossSum + loss*batchSize
+      N = N + batchSize
 
       print((' | Epoch: [%d][%d/%d]    Time %.3f  Data %.3f  Loss %1.4f (%1.4f)  top1 %7.3f (%7.3f)   top5 %7.3f (%7.3f)'):format(
          epoch, n, trainSize, timer:time().real, dataTime, loss, lossSum / N, top1, top1Sum / N, top5, top5Sum / N))
 
-      -- check that the storage didn't get changed do to an unfortunate getParameters call
+      -- check that the storage didn't get changed due to an unfortunate getParameters call
       assert(self.params:storage() == self.model:parameters()[1]:storage())
 
       timer:reset()
@@ -100,13 +101,14 @@ function Trainer:test(epoch, dataloader)
       self:copyInputs(sample)
 
       local output = self.model:forward(self.input):float()
+      local batchSize = output:size(1) / nCrops
       local loss = self.criterion:forward(self.model.output, self.target)
 
       local top1, top5 = self:computeScore(output, sample.target, nCrops)
-      top1Sum = top1Sum + top1
-      top5Sum = top5Sum + top5
-      lossSum = lossSum + loss
-      N = N + 1
+      top1Sum = top1Sum + top1*batchSize
+      top5Sum = top5Sum + top5*batchSize
+      lossSum = lossSum + loss*batchSize
+      N = N + batchSize
 
       print((' | Test: [%d][%d/%d]    Time %.3f  Data %.3f  Loss %1.4f (%1.4f)  top1 %7.3f (%7.3f)  top5 %7.3f (%7.3f)'):format(
          epoch, n, size, timer:time().real, dataTime, loss, lossSum / N, top1, top1Sum / N, top5, top5Sum / N))
@@ -133,11 +135,11 @@ function Trainer:computeScore(output, target, nCrops)
    -- Coputes the top1 and top5 error rate
    local batchSize = output:size(1)
 
-   local _ , predictions = output:float():sort(2, true) -- descending
+   local _ , predictions = output:float():topk(5, 2, true, true) -- descending
 
    -- Find which predictions match the target
    local correct = predictions:eq(
-      target:long():view(batchSize, 1):expandAs(output))
+      target:long():view(batchSize, 1):expandAs(predictions))
 
    -- Top-1 score
    local top1 = 1.0 - (correct:narrow(2, 1, 1):sum() / batchSize)
@@ -149,14 +151,23 @@ function Trainer:computeScore(output, target, nCrops)
    return top1 * 100, top5 * 100
 end
 
+local function getCudaTensorType(tensorType)
+  if tensorType == 'torch.CudaHalfTensor' then
+     return cutorch.createCudaHostHalfTensor()
+  elseif tensorType == 'torch.CudaDoubleTensor' then
+    return cutorch.createCudaHostDoubleTensor()
+  else
+     return cutorch.createCudaHostTensor()
+  end
+end
+
 function Trainer:copyInputs(sample)
    -- Copies the input to a CUDA tensor, if using 1 GPU, or to pinned memory,
    -- if using DataParallelTable. The target is always copied to a CUDA tensor
    self.input = self.input or (self.opt.nGPU == 1
-      and torch.CudaTensor()
-      or cutorch.createCudaHostTensor())
-   self.target = self.target or torch.CudaTensor()
-
+      and torch[self.opt.tensorType:match('torch.(%a+)')]()
+      or getCudaTensorType(self.opt.tensorType))
+   self.target = self.target or (torch.CudaLongTensor and torch.CudaLongTensor())
    self.input:resize(sample.input:size()):copy(sample.input)
    self.target:resize(sample.target:size()):copy(sample.target)
 end
@@ -167,6 +178,8 @@ function Trainer:learningRate(epoch)
    if self.opt.dataset == 'imagenet' then
       decay = math.floor((epoch - 1) / 30)
    elseif self.opt.dataset == 'cifar10' then
+      decay = epoch >= 122 and 2 or epoch >= 81 and 1 or 0
+   elseif self.opt.dataset == 'cifar100' then
       decay = epoch >= 122 and 2 or epoch >= 81 and 1 or 0
    end
    return self.opt.LR * math.pow(0.1, decay)

@@ -25,7 +25,7 @@ local function findClasses(dir)
    local classList = {}
    local classToIdx = {}
    for _ ,class in ipairs(dirs) do
-      if not classToIdx[class] and class ~= '.' and class ~= '..' then
+      if not classToIdx[class] and class ~= '.' and class ~= '..' and class ~= '.DS_Store' then
          table.insert(classList, class)
          classToIdx[class] = #classList
       end
@@ -41,7 +41,7 @@ local function findImages(dir, classToIdx)
 
    ----------------------------------------------------------------------
    -- Options for the GNU and BSD find command
-   local extensionList = {'jpg', 'png','JPG','PNG','JPEG', 'ppm', 'PPM', 'bmp', 'BMP'}
+   local extensionList = {'jpg', 'png', 'jpeg', 'JPG', 'PNG', 'JPEG', 'ppm', 'PPM', 'bmp', 'BMP'}
    local findOptions = ' -iname "*.' .. extensionList[1] .. '"'
    for i=2,#extensionList do
       findOptions = findOptions .. ' -o -iname "*.' .. extensionList[i] .. '"'
