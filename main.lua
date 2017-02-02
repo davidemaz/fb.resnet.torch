@@ -40,7 +40,7 @@ local trainLoader, valLoader = DataLoader.create(opt)
 local trainer = Trainer(model, criterion, opt, optimState)
 
 -- Create saving directory
-lfs.mkdir(opt.savePath)
+lfs.mkdir(opt.save)
 
 if opt.testOnly then
    local top1Err, top5Err = trainer:test(0, valLoader)
